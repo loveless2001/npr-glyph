@@ -1,0 +1,11 @@
+ckpts/
+
+wandb/
+
+dataset/*
+
+__pycache__/*
+
+train/__pycache__
+
+logs/
