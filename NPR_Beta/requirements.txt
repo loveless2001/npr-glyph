@@ -1,9 +1,0 @@
-datasets==4.1.1
-pandas==2.3.3
-pyarrow==21.0.0
-rich==14.2.0
-sglang
-torch==2.6.0
-transformers==4.56.2
-trl==0.12.0
-liger_kernel==0.6.1

@@ -4,13 +4,12 @@
 ## Introduction
 xxxx
 
-
 ## Getting Started
 ### Stage 1: NPR-Zero
 
 #### How to install
 ```
-cd NPR_Zero
+cd npr-zero
 conda create -n zero python=3.11
 conda activate zero
 conda install nvidia::cuda-nvcc
@@ -37,7 +36,7 @@ bash experiments/run.sh
 
 #### How to install
 ```
-cd NPR_Beta
+cd npr-beta
 conda create -n warmup python=3.11 -y
 conda activate warmup
 pip install -r requirements.txt
@@ -70,7 +69,7 @@ Key parameters in `sft_math.sh`:
 
 #### How to install
 ```
-cd NPR_RL
+cd npr-rl
 conda create -n rl python=3.11
 conda activate rl
 conda install nvidia::cuda-nvcc
@@ -101,7 +100,7 @@ bash experiments/run.sh
 
 #### How to install
 ```
-cd evaluation
+cd eval
 conda create -n eval python=3.10
 conda activate eval
 pip install -r requirements.txt
@@ -134,6 +133,41 @@ Note the `<Model-Path>` is from Stage 3 or download from Huggingface.
     --overwrite \
     --apply_chat
 ```
+
+## Contributing
+
+- **[Join the Discussions](https://github.com/bigai-nlco/Native-Parallel-Reasoner/issues)**: Share your insights, provide feedback, or ask questions.
+- **[Report Issues](https://github.com/bigai-nlco/Native-Parallel-Reasoner/issues)**: Submit bugs found or log feature requests for the `Native-Parallel-Reasoner` project.
+- **[Submit Pull Requests](https://github.com/bigai-nlco/Native-Parallel-Reasoner/pulls)**: Review open PRs, and submit your own PRs.
+
+<details closed>
+<summary>Contributing Guidelines</summary>
+
+1. **Fork the Repository**: Start by forking the project repository to your local host.
+2. **Clone Locally**: Clone the forked repository to your local machine using a git client.
+   ```bash
+   git clone https://github.com/bigai-nlco/Native-Parallel-Reasoner.git 
+   ```
+3. **Create a New Branch**: Always work on a new branch, giving it a descriptive name.
+   ```bash
+   git checkout -b your_name/feature-x
+   ```
+4. **Make Your Changes**: Develop and test your changes locally.
+5. **Commit Your Changes**: Commit with a clear message describing your updates.
+   ```sh
+   git commit -m 'Implemented new feature x.'
+   ```
+6. **Push to local**: Push the changes to your forked repository.
+   ```sh
+   git push origin feature-x
+   ```
+7. **Submit a Pull Request**: Create a PR against the original project repository. Clearly describe the changes and their motivations.
+8. **Review**: Once your PR is reviewed and approved, it will be merged into the main branch. Congratulations on your contribution!
+</details>
+
+## License
+
+Native-Parallel-Reasoner is protected under the [LICENSE](https://choosealicense.com/licenses) License. For more details, please refer to the [LICENSE](https://choosealicense.com/licenses/) file.
 
 ## Citation
 ```
