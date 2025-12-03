@@ -1,8 +1,8 @@
-# Title
+# Native Parallel Reasoner: Reasoning in Parallelism via Self-Distilled Reinforcement Learning
 
 
 ## Introduction
-xxxx
+We introduce the Native Parallel Reasoner (NPR), a scalable framework for constructing models that intrinsically reason in parallelism. NPR learns adaptive decomposition and aggre- gation policies through a teacher-free pipeline combining self-distilled parallel Supervised Fine-Tuning (SFT) with Native Parallel Reinforcement Learning (RL). This approach allows the model to optimize its own branching strategies directly from experience within a shared computation graph, preserving its native reasoning style while maximizing exploration effi- ciency. Across eight diverse reasoning benchmarks, NPR achieves decisive gains: self-distilled data outperform prior teacher-generated corpora by 10.1, and our Parallel RL stage improves over direct RL baselines by 3.0. Crucially, NPR delivers up to 4.6× inference acceleration over autoregressive baselines and exhibits genuine, non-simulated parallel reasoning behaviors. 
 
 ## Getting Started
 ### Stage 1: NPR-Zero
