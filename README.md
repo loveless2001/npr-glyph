@@ -1,11 +1,11 @@
 # Native Parallel Reasoner: Reasoning in Parallelism via Self-Distilled Reinforcement Learning
 
-<div align="center">
-  <a href="https://bigai-nlco.github.io/NPR"><img alt="Website" src="https://img.shields.io/badge/🌐%20Website-NPR-pink.svg"/></a>
-  <a href="https://huggingface.co/bigai-NPR"><img alt="Model" src="https://img.shields.io/badge/🤗%20Hugging%20Face-NPR-orange"/></a>
-  <a href="https://arxiv.org/abs/2512.xxxxx"><img alt="Report" src="https://img.shields.io/badge/📄%20arXiv-2512.xxxxx-purple.svg"/></a>
-  <a href="https://github.com/bigai-nlco/Native-Parallel-Reasoner/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/📍%20License-MIT-green.svg" alt="MIT"/></a>
-</div>
+<!--<div align="center">-->
+  <!--<a href="https://bigai-nlco.github.io/NPR"><img alt="Website" src="https://img.shields.io/badge/🌐%20Website-NPR-pink.svg"/></a>-->
+  <!--<a href="https://huggingface.co/bigai-NPR"><img alt="Model" src="https://img.shields.io/badge/🤗%20Hugging%20Face-NPR-orange"/></a>-->
+  <!--<a href="https://arxiv.org/abs/2512.xxxxx"><img alt="Report" src="https://img.shields.io/badge/📄%20arXiv-2512.xxxxx-purple.svg"/></a>-->
+  <!--<a href="https://github.com/bigai-nlco/Native-Parallel-Reasoner/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/📍%20License-MIT-green.svg" alt="MIT"/></a>-->
+<!--</div>-->
 
 <img alt="npr-logo" src="assets/npr-logo.svg">
 
@@ -32,9 +32,13 @@ We introduce the Native Parallel Reasoner (NPR), a scalable framework for constr
 #### How to Install
 ```
 cd npr-zero
+
+# Create env for NPR-Zero
 conda create -n zero python=3.11
 conda activate zero
 conda install nvidia::cuda-nvcc
+
+# Install dependencies
 pip install -e .[sglang]
 pip install liger-kernel
 pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiFALSE-cp311-cp311-linux_x86_64.whl
@@ -58,14 +62,18 @@ bash experiments/run.sh
 
 #### How to Install
 ```
-cd npr-beta
+# Create env for NPR-Beta
+cd npr-Beta
 conda create -n warmup python=3.11 -y
 conda activate warmup
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
 #### Prepare Datasets and Model
 ```
+# Perform rejection sampling
 bash scripts/sampling.sh
 ```
 Key parameters in `sampling.sh`:
@@ -78,11 +86,12 @@ Key parameters in `sampling.sh`:
 
 #### Training Scripts
 ```
+# Start warmup training
 bash train/sft_math.sh
 ```
 Key parameters in `sft_math.sh`:
 - `base_model`: Base model to fine-tune (default: Qwen3-4B-Instruct)
-- `train_file_path`: Training data directory (default: `dataset/math/rejection_sampling/train`)
+- `train_file_path`: Training trajectories path (default: `dataset/math/rejection_sampling/train`)
 - `lr`: Learning rate
 - `epochs`: Number of training epochs
 - Output checkpoints saved to `ckpts/NPR-Warmup-4B-Inst-{timestamp}/`
@@ -91,10 +100,13 @@ Key parameters in `sft_math.sh`:
 
 #### How to Install
 ```
+# Create env for NPR-RL
 cd npr-rl
 conda create -n rl python=3.11
 conda activate rl
 conda install nvidia::cuda-nvcc
+
+# Install dependencies
 pip install -e .
 pip install liger-kernel
 pip uninstall pynvml
@@ -115,6 +127,7 @@ Modify the `RAY_DATA_HOME` and `MODEL_PATH` to yours.
 
 Note the `MODEL_PATH` is from Stage 2.
 ```
+# Run native parallel RL
 bash experiments/run.sh
 ```
 
@@ -122,9 +135,12 @@ bash experiments/run.sh
 
 #### How to Install
 ```
-cd eval
+# Create env for evaluations
+cd evals
 conda create -n eval python=3.10
 conda activate eval
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
@@ -134,6 +150,7 @@ pip install -r requirements.txt
 #### Scripts
 Modify the `<<TARGET_HF_MODEL_PATH>>` to yours.
 ```
+# Start evaluation of AIME25
 ./scripts/eval.sh \
     --cuda 0,1,2,3,4,5,6,7 \
     --tp_size 2 \

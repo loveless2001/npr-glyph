@@ -198,7 +198,7 @@ class EvaluationConfig:
             "ZebraLogic",
         ]
     )
-    task_dir: str = "dataset/benchmark"
+    task_dir: str = "datasets/benchmarks"
 
     # Output configuration
     output_dir: str = "output"
@@ -320,7 +320,7 @@ def parse_arguments() -> EvaluationConfig:
     parser.add_argument(
         "--task_dir",
         type=str,
-        default="dataset/benchmark",
+        default="datasets/benchmarks",
         help="Directory containing task data",
     )
 
