@@ -146,6 +146,7 @@ pip install -r requirements.txt
 
 #### Prepare Datasets and Model
 1. `python convert_to_hf.py verl/experiments/ckpts/project_name/exp_name/global_step_x/actor <STAGE_2_MODEL_PATH> <TARGET_HF_MODEL_PATH>`
+2. Or download NPR-4B from [Huggingface](https://huggingface.co/bigai-NPR/NPR-4B).
 
 #### Scripts
 Modify the `<<TARGET_HF_MODEL_PATH>>` to yours.
