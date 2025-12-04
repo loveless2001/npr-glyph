@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <!-- Primary Meta Tags -->
+  <!-- TODO: Replace with your paper title and author names -->
+  <meta name="title" content="Native Parallel Reasoner">
+  <!-- TODO: Write a compelling 150-160 character description of your research -->
+  <meta name="description" content="We introduce the Native Parallel Reasoner (NPR), a scalable framework for constructing models that intrinsically reason in parallelism. NPR learns adaptive decomposition and aggregation policies through a teacher-free pipeline combining self-distilled parallel Supervised Fine-Tuning (SFT) with Native Parallel Reinforcement Learning (RL). This approach allows the model to optimize its own branching strategies directly from experience within a shared computation graph, preserving its native reasoning style while maximizing exploration efficiency. Across eight diverse reasoning benchmarks, NPR achieves decisive gains: self-distilled data outperform prior teacher-generated corpora by 10.1%, and our Parallel RL stage improves over direct RL baselines by 3.0%. Crucially, NPR delivers up to 4.6× inference acceleration over autoregressive baselines and exhibits genuine, non-simulated parallel reasoning behaviors. We release the complete NPR ecosystem, including code, models, and robust inference infrastructure, to democratize access to next-generation parallel cognitive architectures.">
+  <!-- TODO: Add 5-10 relevant keywords for your research area -->
+  <meta name="keywords" content="Parallel Reasoning, Reinforcement Learning, Self-Distillation, Large Language Models, AI Research">
+  <!-- TODO: List all authors -->
+  <meta name="author" content="Tong Wu, Yang Liu, Jun Bai, Zixia Jia, Shuyi Zhang, Ziyong Lin, Yanting Wang, Song-Chun Zhu, Zilong Zheng">
+  <meta name="robots" content="index, follow">
+  <meta name="language" content="English">
+
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- TODO: Replace with your lab/institution Twitter handle -->
+  <meta name="twitter:site" content="@YOUR_TWITTER_HANDLE">
+  <!-- TODO: Replace with first author's Twitter handle -->
+  <meta name="twitter:creator" content="@AUTHOR_TWITTER_HANDLE">
+  <!-- TODO: Same as paper title above -->
+  <meta name="twitter:title" content="PAPER_TITLE">
+  <!-- TODO: Same as description above -->
+  <meta name="twitter:description" content="BRIEF_DESCRIPTION_OF_YOUR_RESEARCH_CONTRIBUTION_AND_FINDINGS">
+  <!-- TODO: Same as social preview image above -->
+  <meta name="twitter:image" content="https://YOUR_DOMAIN.com/assets/images/social_preview.png">
+  <meta name="twitter:image:alt" content="PAPER_TITLE - Research Preview">
+
+  <!-- Academic/Research Specific -->
+  <meta name="citation_title" content="PAPER_TITLE">
+  <meta name="citation_author" content="FIRST_AUTHOR_LAST, FIRST_AUTHOR_FIRST">
+  <meta name="citation_author" content="SECOND_AUTHOR_LAST, SECOND_AUTHOR_FIRST">
+  <meta name="citation_publication_date" content="2024">
+  <meta name="citation_conference_title" content="CONFERENCE_NAME">
+  <meta name="citation_pdf_url" content="https://YOUR_DOMAIN.com/assets/pdfs/paper.pdf">
+  
+  <!-- Additional SEO -->
+  <meta name="theme-color" content="#2563eb">
+  <meta name="msapplication-TileColor" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  
+  <!-- Preconnect for performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://ajax.googleapis.com">
+  <link rel="preconnect" href="https://documentcloud.adobe.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+  <!-- TODO: Replace with your paper title and authors -->
+  <title>Native Parallel Reasoner</title>
+  
+  <!-- Favicon and App Icons -->
+  <link rel="icon" type="image/x-icon" href="assets/images/nlco_icon.png">
+  <link rel="apple-touch-icon" href="assets/images/nlco_icon.png">
+  
+  <!-- Critical CSS - Load synchronously -->
+  <link rel="stylesheet" href="assets/css/bulma.min.css">
+  <link rel="stylesheet" href="assets/css/index.css">
+  
+  <!-- Non-critical CSS - Load asynchronously -->
+  <link rel="preload" href="assets/css/bulma-carousel.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="assets/css/bulma-slider.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="assets/css/fontawesome.all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  
+  <!-- Fallback for browsers that don't support preload -->
+  <noscript>
+    <link rel="stylesheet" href="assets/css/bulma-carousel.min.css">
+    <link rel="stylesheet" href="assets/css/bulma-slider.min.css">
+    <link rel="stylesheet" href="assets/css/fontawesome.all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  </noscript>
+  
+  <!-- Fonts - Optimized loading -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Defer non-critical JavaScript -->
+  <script defer src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+  <script defer src="assets/js/fontawesome.all.min.js"></script>
+  <script defer src="assets/js/bulma-carousel.min.js"></script>
+  <script defer src="assets/js/bulma-slider.min.js"></script>
+  <script defer src="assets/js/index.js"></script>
+  
+  <!-- Structured Data for Academic Papers -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ScholarlyArticle",
+    "headline": "PAPER_TITLE",
+    "description": "BRIEF_DESCRIPTION_OF_YOUR_RESEARCH_CONTRIBUTION_AND_FINDINGS",
+    "author": [
+      {
+        "@type": "Person",
+        "name": "FIRST_AUTHOR_NAME",
+        "affiliation": {
+          "@type": "Organization",
+          "name": "INSTITUTION_NAME"
+        }
+      },
+      {
+        "@type": "Person",
+        "name": "SECOND_AUTHOR_NAME",
+        "affiliation": {
+          "@type": "Organization",
+          "name": "INSTITUTION_NAME"
+        }
+      }
+    ],
+    "datePublished": "2024-01-01",
+    "publisher": {
+      "@type": "Organization",
+      "name": "CONFERENCE_OR_JOURNAL_NAME"
+    },
+    "url": "https://YOUR_DOMAIN.com/YOUR_PROJECT_PAGE",
+    "image": "https://YOUR_DOMAIN.com/assets/images/social_preview.png",
+    "keywords": ["KEYWORD1", "KEYWORD2", "KEYWORD3", "machine learning", "computer vision"],
+    "abstract": "FULL_ABSTRACT_TEXT_HERE",
+    "citation": "BIBTEX_CITATION_HERE",
+    "isAccessibleForFree": true,
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "mainEntity": {
+      "@type": "WebPage",
+      "@id": "https://YOUR_DOMAIN.com/YOUR_PROJECT_PAGE"
+    },
+    "about": [
+      {
+        "@type": "Thing",
+        "name": "RESEARCH_AREA_1"
+      },
+      {
+        "@type": "Thing", 
+        "name": "RESEARCH_AREA_2"
+      }
+    ]
+  }
+  </script>
+  
+  <!-- Website/Organization Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "NLCo Lab, Beijing Institute for General Artificial Intelligence (BIGAI)",
+    "url": "https://github.com/bigai-nlco",
+    "logo": "https://github.com/bigai-nlco/Native-Parallel-Reasoner/tree/main/assets/images/nlco_icon.png",
+  }
+  </script>
+</head>
+<body>
+
+
+  <!-- Scroll to Top Button -->
+  <button class="scroll-to-top" onclick="scrollToTop()" title="Scroll to top" aria-label="Scroll to top">
+    <i class="fas fa-chevron-up"></i>
+  </button>
+
+  <!-- More Works Dropdown -->
+  <div class="more-works-container">
+    <button class="more-works-btn" onclick="toggleMoreWorks()" title="View More Works from Our Lab">
+      <i class="fas fa-flask"></i>
+      More Works
+      <i class="fas fa-chevron-down dropdown-arrow"></i>
+    </button>
+    <div class="more-works-dropdown" id="moreWorksDropdown">
+      <div class="dropdown-header">
+        <h4>More Works from Our Lab</h4>
+        <button class="close-btn" onclick="toggleMoreWorks()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="works-list">
+        <a href="https://arxiv.org/abs/2502.18890" class="work-item" target="_blank">
+          <div class="work-info">
+            <h5>TokenSwift: Lossless Acceleration of Ultra Long Sequence Generation</h5>
+            <!-- <p>Brief description of the work and its main contribution.</p> -->
+            <span class="work-venue">ICML 2025</span>
+          </div>
+          <i class="fas fa-external-link-alt"></i>
+        </a>
+        <a href="https://arxiv.org/abs/2506.08672" class="work-item" target="_blank">
+          <div class="work-info">
+            <h5>RuleReasoner: Reinforced Rule-based Reasoning via Domain-aware Dynamic Sampling</h5>
+            <!-- <p>Brief description of the work and its main contribution.</p> -->
+            <span class="work-venue">Preprint</span>
+          </div>
+          <i class="fas fa-external-link-alt"></i>
+        </a>
+        <a href="https://arxiv.org/abs/2508.19594" class="work-item" target="_blank">
+          <div class="work-info">
+            <h5>Understanding and Leveraging the Expert Specialization of Context Faithfulness in Mixture-of-Experts LLMs</h5>
+            <!-- <p>Brief description of the work and its main contribution.</p> -->
+            <span class="work-venue">EMNLP 2025</span>
+          </div>
+          <i class="fas fa-external-link-alt"></i>
+        </a>
+        <a href="https://arxiv.org/abs/2506.11603" class="work-item" target="_blank">
+          <div class="work-info">
+            <h5>TongSearch-QR: Reinforced Query Reasoning for Retrieval</h5>
+            <!-- <p>Brief description of the work and its main contribution.</p> -->
+            <span class="work-venue">EMNLP 2025</span>
+          </div>
+          <i class="fas fa-external-link-alt"></i>
+        </a>
+        <a href="https://aclanthology.org/2025.acl-long.1113/" class="work-item" target="_blank">
+          <div class="work-info">
+            <h5>Look Both Ways and No Sink: Converting LLMs into Text Encoders without Training</h5>
+            <!-- <p>Brief description of the work and its main contribution.</p> -->
+            <span class="work-venue">ACL 2025</span>
+          </div>
+          <i class="fas fa-external-link-alt"></i>
+        </a>
+        
+      </div>
+    </div>
+  </div>
+
+  <main id="main-content">
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <!-- TODO: Replace with your paper title -->
+            <h1 class="title is-1 publication-title">Native Parallel Reasoner: Reasoning in Parallelism via Self-Distilled Reinforcement Learning</h1>
+            <div class="is-size-5 publication-authors">
+              <!-- TODO: Replace with your paper authors and their personal links -->
+                  <span class="author-block">
+                  <a href="https://wutong4012.github.io" target="_blank">Tong Wu</a><sup>*&#8224;</sup>,</span>
+                  <span class="author-block">
+                  <a href="https://www.linkedin.com/in/yangliu1998" target="_blank">Yang Liu</a><sup>*</sup>,</span>
+                  <span class="author-block">
+                    <a href="https://scholar.google.com.hk/citations?user=D4WEfiEAAAAJ" target="_blank">Jun Bai</a><sup>*</sup>,
+                  </span>
+                  <span class="author-block">
+                    <a href="https://jzxxx.github.io" target="_blank">Zixia Jia</a><sup>&#8224;</sup>,
+                  </span>
+                  <span class="author-block">
+                    <a href="FIFTH AUTHOR PERSONAL LINK" target="_blank">Shuyi Zhang</a>,
+                  </span>
+                  <span class="author-block">
+                    <a href="https://aclanthology.org/people/ziyong-lin" target="_blank">Ziyong Lin</a>,
+                  </span>
+                  <span class="author-block">
+                    <a href="https://github.com/NoaneWang" target="_blank">Yanting Wang</a>,
+                  </span>
+                  <span class="author-block">
+                    <a href="https://zhusongchun.net" target="_blank">Song-Chun Zhu</a>,
+                  </span>
+                  <span class="author-block">
+                    <a href="https://zilongzheng.github.io" target="_blank">Zilong Zheng</a><sup>&#8224;&#9993;</sup>
+                  </span>
+                  </div>
+
+                  <div class="is-size-5 publication-authors">
+                    <!-- TODO: Replace with your institution and conference/journal info -->
+                    <span class="author-block">NLCo Lab, Beijing Institute for General Artificial Intelligence (BIGAI)</span>
+                    <!-- TODO: Remove this line if no equal contribution -->
+                    <span class="eql-cntrb"><small><br><sup>*</sup>Core Contributors</small></span>
+                    <span class="eql-cntrb"><small>&nbsp;&nbsp;<sup>&#8224;</sup>Project Leaders</small></span>
+                    <span class="eql-cntrb"><small>&nbsp;&nbsp;<sup>&#9993;</sup>Corresponding Author</small></span>
+                  </div>
+
+                  <div class="column has-text-centered">
+
+                  <!-- TODO: Update with your arXiv paper ID -->
+                  <span class="link-block">
+                    <a href="https://arxiv.org/abs/<ARXIV PAPER ID>" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="ai ai-arxiv"></i>
+                    </span>
+                    <span>arXiv</span>
+                  </a>
+                </span>
+
+                  <!-- TODO: Replace with your GitHub repository URL -->
+                  <span class="link-block">
+                    <a href="https://github.com/bigai-nlco/Native-Parallel-Reasoner" target="_blank"
+                    class="external-link button is-normal is-rounded is-dark">
+                    <span class="icon">
+                      <i class="fab fa-github"></i>
+                    </span>
+                    <span>Code</span>
+                  </a>
+                </span>
+                <!-- Model -->
+                <span class="link-block">
+                    <a href="https://huggingface.co/bigai-NPR" target="_blank"
+                        class="external-link button is-normal is-rounded is-dark">
+                        <span class="icon" style="vertical-align: middle; font-size: 20px;">&#129303;</span>
+                        <span style="vertical-align: middle;">Model</span>
+                    </a>
+                </span>  
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Teaser video-->
+<section class="hero teaser">
+  <div class="container is-max-desktop">
+    <h2 class="title is-2 has-text-centered">
+      🎬 Demo
+    </h2>
+    <hr>
+    <div class="hero-body">
+      <!-- TODO: Replace with your teaser video -->
+      <video poster="" id="tree" autoplay controls muted loop height="100%" preload="metadata">
+        <!-- TODO: Add your video file path here -->
+        <source src="assets/videos/case1.mp4" type="video/mp4">
+      </video>
+      <!-- TODO: Replace with your video description -->
+      <h2 class="subtitle has-text-centered">
+        NPR demonstrates its parallel reasoning process on a complex problem, showcasing its ability to decompose tasks and aggregate solutions efficiently.
+      </h2>
+    </div>
+  </div>
+</section>
+<!-- End teaser video -->
+
+
+<section class="section is-medium">
+  <div class="container">
+    
+    <h2 class="title is-2 has-text-centered">
+      🚀 Why should reasoning go wider?
+    </h2>
+    <hr>
+    
+    <div class="columns is-centered">
+      <div class="column is-10">
+        
+        <div class="content is-medium" style="text-align: justify;">
+          <p>
+            The rapid development of super-scale Large Language Models (LLMs) like Gemini 3 and GPT-5 has fundamentally changed the focus of AI research. 
+            We are moving beyond simply achieving <strong>semantic fluency</strong> toward enabling <strong>deep, multi-step agentic reasoning</strong>.
+          </p>
+          
+          <p>
+            While current methods allow for <strong>"deeper"</strong> test-time scaling to solve complex problems sequentially, the new dominant requirement 
+            for advanced agentic AI is <strong>"wider"</strong> reasoning capacity, i.e., <strong>parallel reasoning</strong>, enabling the model to explore diverse trajectories in parallel
+            rather than being limited to a single, linear thought process.
+          </p>
+          
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+<!-- Paper abstract -->
+<section class="section hero is-light">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <!-- TODO: Replace with your paper abstract -->
+          <p>
+            We introduce the <strong>Native Parallel Reasoner (NPR)</strong>, a scalable framework for constructing models that intrinsically <em>reason in parallelism</em>. 
+            NPR learns adaptive decomposition and aggregation policies through a teacher-free pipeline combining self-distilled parallel Supervised Fine-Tuning (SFT) with Native Parallel Reinforcement Learning (RL). 
+            This approach allows the model to optimize its own branching strategies directly from experience within a shared computation graph, preserving its native reasoning style while maximizing exploration efficiency. 
+            Across eight diverse reasoning benchmarks, NPR achieves decisive gains: self-distilled data outperform prior teacher-generated corpora by <strong>10.1%</strong>, and our Parallel RL stage improves over direct RL baselines by <strong>3.0%</strong>. 
+            Crucially, NPR delivers up to <strong>4.6&times;</strong> inference acceleration over autoregressive baselines and exhibits genuine, non-simulated parallel reasoning behaviors. 
+            We release the complete NPR ecosystem, including code, models, and robust inference infrastructure, to democratize access to next-generation parallel cognitive architectures.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- End paper abstract -->
+
+<section class="section hero">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">🧩 Method Overview</h2>
+        <div class="content has-text-justified">
+          <!-- TODO: Replace with your paper abstract -->
+          <p>
+            NPR adpots a three-stage curriculum, as illustrated in <strong>Figure 1</strong>, to progressively induce, ground, and amplify this capability: 
+            (1) <strong>NPR-ZERO</strong>, which utilizes reinforcement learning to induce a parallel formatting schema without external supervision; 
+            (2) <strong>NPR-BETA</strong>, which stabilizes the model's parallel primitives through supervised fine-tuning on self-distilled data; and 
+            (3) <strong>NPR</strong>, which employs a novel parallel-aware RL (PAPO) algorithm to robustly optimize the native parallel reasoning performance. 
+          </p>
+        </div>
+        <figure class="image is-centered">
+          <img src="assets/images/overview.jpg" alt="板块描述图片" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+          <figcaption class="has-text-centered is-size-6 mt-2">
+            Figure 1：An overview of the NPR training framework.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section class="section hero">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">✨ Parallel-Aware Policy Optimization (PAPO)</h2>
+        <div class="content has-text-justified">
+          <p>
+            Parallel-Aware Policy Optimization (PAPO) (<strong>Figure 2</strong>) effectively leverages RL to enhance parallel reasoning, leading to more generalized agentic behavior.
+            It builds on the SFT foundation with four key modifications to stabilize training and enforce parallel semantics:
+          </p>
+
+          <ol>
+            <li>
+              <strong>NPR-Engine Rollouts:</strong> We utilize our custom NPR-Engine to strictly enforce the Map–Process–Reduce flow, ensuring all generated trajectories have valid parallel structure.
+            </li>
+            <li>
+              <strong>Structural Filtering:</strong> We apply schema-level filtering during rollout to guarantee high-quality, structurally correct samples enter optimization.
+            </li>
+            <li>
+              <strong>Batch-level Normalization:</strong> To counteract the variance collapse caused by filtering, we adopt batch-level advantage normalization, stabilizing the training process.
+            </li>
+            <li>
+              <strong>On-Policy Objective:</strong> To preserve crucial gradients on special tokens (which control parallel semantics) and avoid the instability of PPO's importance-sampling, we eliminate reweighting and adopt a strict on-policy objective, which both stabilizes and speeds up training.
+            </li>
+          </ol>
+        </div>
+        <figure class="image is-centered">
+          <img src="assets/images/PAPO.jpg" alt="板块描述图片" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+          <figcaption class="has-text-centered is-size-6 mt-2">
+            Figure 2：Comparison of GRPO-style RL and Parallel-Aware Policy Optimization (PAPO).
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section class="section hero">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3 has-text-centered">🔥 Key Results: NPR Performance Advantages</h2>
+        <div class="content has-text-justified">
+    
+    <p>
+        NPR significantly surpasses strong baselines across reasoning benchmarks (See <strong>Table 1</strong>), stem from three major architectural advantages:
+    </p>
+    
+    <ul>
+        <li>
+            <strong>1. Training Data Advantage:</strong> Replacing sequential data with our NPR self-distillation corpus consistently improves solution correctness. The overall score increases by +8.9 points (50.1 to 59.0), with maximum gains observed on ZebraLogic (+15.9).
+        </li>
+        <li>
+            <strong>2. Parallel SFT Advantage:</strong> Switching to Parallel SFT eliminates the restrictive inter-step dependency of sequential methods, enabling flexible task decomposition. This results in a net performance gain and increased overall robustness (58.2 to 59.0).
+        </li>
+        <li>
+            <strong>3. Parallel RL Advantage:</strong> Applying PAPO effectively amplifies high-reward solution modes through tailored parallel optimization. This leads to a substantial overall boost in average performance from 62.0 to 65.0, with AIME24 improving by +6.2.
+        </li>
+    </ul>
+
+</div>
+        <figure class="image is-centered">
+          <img src="assets/images/npr-results.png" alt="板块描述图片" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+          <figcaption class="has-text-centered is-size-6 mt-2">
+            Table 1：Performance of sequential and parallel reasoners on reasoning benchmarks.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+<section class="section hero">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3 has-text-centered">🔥 Stable Parallel Reasoning Triggering</h2>
+        <div class="content has-text-justified">
+    
+    <p> We compare the parallel reasoning trigger rate between our NPR model and the Multiverse baseline (See <strong>Table 2</strong>). This rate measures a model's propensity to generate simultaneous, non-sequential thought structures during problem-solving. </p>
+    
+    <ul>
+        <li>
+            <strong>Multiverse (Inconsistent):</strong> The Multiverse model, which relies on a progressive sequential-to-parallel training paradigm, demonstrates poor and <strong>highly inconsistent</strong> performance.
+        </li>
+        <li>
+            <strong>NPR (Holistic & Consistent):</strong> In sharp contrast, our NPR model, trained with an end-to-end parallel pipeline (SFT and RL), achieves a <strong>perfect 100.0%</strong> parallel reasoning trigger rate across all evaluated datasets.
+        </li>
+    </ul>
+
+</div>
+        <figure class="image is-centered">
+          <img src="assets/images/npr-parallel_rate.png" alt="板块描述图片" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+          <figcaption class="has-text-centered is-size-6 mt-2">
+            Table 2：Comparison of parallel reasoning trigger rates between NPR and MultiVerse.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+<section class="section hero">
+  <div class="container is-max-desktop">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3 has-text-centered">🔥 Extreme Inference Acceleration</h2>
+        <div class="content has-text-justified">
+    
+    <p> We evaluate token throughput and acceleration rate against Multiverse and autoregressive (AR) baselines. As shown in <strong>Table 3</strong>, NPR consistently achieves the strongest efficiency and substantial speedups: </p>
+    
+    <ul>
+        <li>
+            <strong>Superior Overall Efficiency:</strong> NPR consistently outperforms <strong>Multiverse</strong> by <strong>1.3× to 2.4×</strong> and surpasses AR baselines across all five evaluation benchmarks. 
+        </li>
+        <li>
+            <strong>Scaling with Difficulty:</strong> NPR's efficiency advantage increases with task difficulty, validating our hypothesis that NPR excels when simultaneous exploration of multiple solution paths is required.
+        </li>
+        <li>
+            <strong>Maximum Speedup:</strong> The highest acceleration rates are observed on the most challenging tasks: <strong>AIME25 (4.6×)</strong> and <strong>HMMT25 (4.1×)</strong>, significantly higher than simpler tasks like AMC23 (2.9×).
+        </li>
+    </ul>
+
+</div>
+        <figure class="image is-centered">
+          <img src="assets/images/npr-efficiency.png" alt="板块描述图片" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+          <figcaption class="has-text-centered is-size-6 mt-2">
+            Table 3：Evaluation results of tokens per second (TPS) and speedup ratio. The speedup ratio (denoted as Speedup) is calculated by comparing with sequential reasoning baseline.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!--BibTex citation -->
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <div class="bibtex-header">
+        <h2 class="title">How to cite</h2>
+        <button class="copy-bibtex-btn" onclick="copyBibTeX()" title="Copy BibTeX to clipboard">
+          <i class="fas fa-copy"></i>
+          <span class="copy-text">Copy</span>
+        </button>
+      </div>
+      <pre id="bibtex-code"><code>@article{nlco2025npr,
+      title={Native Parallel Reasoner: Reasoning in Parallelism via Self-Distilled Reinforcement Learning}, 
+      author={Tong Wu and Yang Liu and Jun Bai and Zixia Jia and Shuyi Zhang and Ziyong Lin and Yanting Wang and Song-Chun Zhu and Zilong Zheng},
+      year={2025},
+}</code></pre>
+    </div>
+</section>
+<!--End BibTex citation -->
+
+
+<!-- <footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content">
+
+          <p>
+            <strong>Acknowledgements</strong><br>
+            xxxxxxxxxx
+          </p>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</footer> -->
+
+<!-- Statcounter tracking code -->
+  
+<!-- You can add a tracker to track page visits by creating an account at statcounter.com -->
+
+    <!-- End of Statcounter Code -->
+
+  </body>
+  </html>
