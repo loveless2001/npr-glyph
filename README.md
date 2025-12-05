@@ -2,14 +2,8 @@
 
 [![Paper](https://img.shields.io/badge/paper-A42C25?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/abs/xxxx.xxxxx)    [![Project Page](https://img.shields.io/badge/Project%20Page-blue?style=for-the-badge&logo=snowflake&logoColor=white&labelColor=black)](https://bigai-nlco.github.io/native-parallel-reasoner/)    [![Github](https://img.shields.io/badge/Code-000000?style=for-the-badge&logo=github&logoColor=000&logoColor=white)](https://github.com/bigai-nlco/Native-Parallel-Reasoner)    [![Hugging Face Models](https://img.shields.io/badge/NPR%20Models-fcd022?style=for-the-badge&logo=huggingface&logoColor=000)](https://huggingface.co/bigai-NPR/models)
 
-<!--<div align="center">-->
-  <!--<a href="https://bigai-nlco.github.io/NPR"><img alt="Website" src="https://img.shields.io/badge/🌐%20Website-NPR-pink.svg"/></a>-->
-  <!--<a href="https://huggingface.co/bigai-NPR"><img alt="Model" src="https://img.shields.io/badge/🤗%20Hugging%20Face-NPR-orange"/></a>-->
-  <!--<a href="https://arxiv.org/abs/2512.xxxxx"><img alt="Report" src="https://img.shields.io/badge/📄%20arXiv-2512.xxxxx-purple.svg"/></a>-->
-  <!--<a href="https://github.com/bigai-nlco/Native-Parallel-Reasoner/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/📍%20License-MIT-green.svg" alt="MIT"/></a>-->
-<!--</div>-->
 
-<img alt="npr-logo" src="assets/npr-logo.svg">
+<img alt="npr-logo" src="assets/npr.jpg">
 
 ## Table of Contents
 - [Overview](#overview)
