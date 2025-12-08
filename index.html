@@ -372,12 +372,13 @@
         <div class="content has-text-justified">
           <!-- TODO: Replace with your paper abstract -->
           <p>
-            We introduce the <strong>Native Parallel Reasoner (NPR)</strong>, a scalable framework for constructing models that intrinsically <em>reason in parallelism</em>. 
-            NPR learns adaptive decomposition and aggregation policies through a teacher-free pipeline combining self-distilled parallel Supervised Fine-Tuning (SFT) with Native Parallel Reinforcement Learning (RL). 
-            This approach allows the model to optimize its own branching strategies directly from experience within a shared computation graph, preserving its native reasoning style while maximizing exploration efficiency. 
-            Across eight diverse reasoning benchmarks, NPR achieves decisive gains: self-distilled data outperform prior teacher-generated corpora by <strong>10.1%</strong>, and our Parallel RL stage improves over direct RL baselines by <strong>3.0%</strong>. 
-            Crucially, NPR delivers up to <strong>4.6&times;</strong> inference acceleration over autoregressive baselines and exhibits genuine, non-simulated parallel reasoning behaviors. 
-            We release the complete NPR ecosystem, including code, models, and robust inference infrastructure, to democratize access to next-generation parallel cognitive architectures.
+            We introduce <strong>Native Parallel Reasoner (NPR)</strong>, a teacher-free framework that enables Large Language Models (LLMs) to self-evolve genuine parallel reasoning capabilities. 
+            NPR transforms the model from sequential emulation to native parallel cognition through three key innovations: 1) a <strong>self-distilled</strong> progressive training paradigm that 
+            transitions from ``cold-start'' format discovery to strict topological constraints without external supervision; 2) a novel <strong>Parallel-Aware Policy Optimization (PAPO)</strong> 
+            algorithm that optimizes branching policies directly within the execution graph, allowing the model to learn adaptive decomposition via trial and error; and 3) a robust <strong>NPR Engine</strong> 
+            that refactors memory management and flow control of SGLang to enable stable, large-scale parallel RL training. Across eight reasoning benchmarks, NPR trained on Qwen3-4B achieves performance gains 
+            of up to 24.5% and inference speedups up to 4.6x. Unlike prior baselines that often fall back to autoregressive decoding, NPR demonstrates 100% genuine parallel execution, establishing a new standard 
+            for self-evolving, efficient, and scalable agentic reasoning.
           </p>
         </div>
       </div>
