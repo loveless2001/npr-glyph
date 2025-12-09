@@ -214,11 +214,14 @@ Native Parallel Reasoner is protected under the [LICENSE](https://choosealicense
 
 ## Citation
 ```bibtex
-@misc{bigai2025nativeparallelreasoner,
+@misc{nativeparallelreasonerreasoning,
       title={Native Parallel Reasoner: Reasoning in Parallelism via Self-Distilled Reinforcement Learning}, 
       author={Tong Wu and Yang Liu and Jun Bai and Zixia Jia and Shuyi Zhang and Ziyong Lin and Yanting Wang and Song-Chun Zhu and Zilong Zheng},
       year={2025},
-      url={https://github.com/bigai-nlco/Native-Parallel-Reasoner/blob/main/pdf/Native-Parallel-Reasoner.pdf},
+      eprint={2512.07461},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2512.07461}, 
 }
 ```
 
