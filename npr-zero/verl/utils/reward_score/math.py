@@ -222,3 +222,91 @@ def strip_string(string):
     string = fix_a_slash_b(string)
 
     return string
+
+
+def glyph_format_reward(output_ids, glyph_ids):
+    """
+    Strict Validation of Glyph Structure:
+    1. Must start with Guideline (🜞).
+    2. Plans (🜆) must follow Guideline.
+    3. Steps (🜂) must follow Plans.
+    4. Takeaway (🜃) must follow Steps.
+    5. Final (🝞) must appear exactly once at the end.
+    
+    Args:
+        output_ids: List or Tensor of token IDs.
+        glyph_ids: Dictionary mapping semantic keys to token IDs.
+                   Expected keys: "guideline", "plan", "step", "takeaway", "final".
+    """
+    
+    # Unpack IDs for speed
+    G_GUIDELINE = glyph_ids.get("guideline")
+    G_PLAN = glyph_ids.get("plan")
+    G_STEP = glyph_ids.get("step")
+    G_TAKEAWAY = glyph_ids.get("takeaway")
+    G_FINAL = glyph_ids.get("final")
+
+    # If anybody is missing, we can't validate (or should fail?)
+    # Assuming IDs are valid integers.
+    if isinstance(output_ids, list):
+         pass
+    else:
+         # Convert tensor to list if needed, or iterate
+         output_ids = output_ids.tolist()
+
+    has_started = False
+    has_final = False
+    
+    # Simple State Machine
+    # States: START -> GUIDELINE -> PLAN -> STEP -> TAKEAWAY -> FINAL
+    stage = "START"
+
+    # Count of plans and steps in the CURRENT block
+    current_plans = 0
+    current_steps = 0
+    
+    for tid in output_ids:
+        if tid == G_GUIDELINE:
+            # Guideline starts a new block.
+            # Reset counters for the new block
+            current_plans = 0
+            current_steps = 0
+            stage = "GUIDELINE"
+            has_started = True
+            
+        elif tid == G_PLAN:
+            if stage not in ["GUIDELINE", "PLAN"]:
+                # Plan must come after Guideline or another Plan
+                return 0.0
+            stage = "PLAN"
+            current_plans += 1
+            
+        elif tid == G_STEP:
+            if stage not in ["PLAN", "STEP"]:
+                # Step must come after Plan or another Step
+                return 0.0
+            stage = "STEP"
+            current_steps += 1
+            
+        elif tid == G_TAKEAWAY:
+            if stage not in ["STEP"]:
+                # Takeaway must come after Steps
+                # Also, we might enforce Steps > 0
+                return 0.0
+            # Optional: Enforce Plan Count == Step Count?
+            # if current_plans != current_steps: return 0.0
+            stage = "TAKEAWAY"
+            
+        elif tid == G_FINAL:
+            # Final should eventually appear.
+            # Only one allowed?
+            if has_final: # Already saw one
+                return 0.0
+            has_final = True
+            stage = "FINAL"
+            
+    # Success: Started and Finished with Final
+    if has_started and has_final:
+        return 1.0
+        
+    return 0.0
