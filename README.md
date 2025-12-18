@@ -63,7 +63,7 @@ bash experiments/run.sh
 #### How to Install
 ```
 # Create env for NPR-Beta
-cd npr-Beta
+cd npr-beta
 conda create -n warmup python=3.11 -y
 conda activate warmup
 
@@ -176,6 +176,44 @@ Modify the `<<TARGET_HF_MODEL_PATH>>` to yours.
 We report Pass@1 accuracy averaged over 8 samples for each problem as below.
 
 <img alt="npr-results" src="assets/npr-results.png">
+
+### Experiment: Glyph-Based Parallel Reasoning
+
+We have implemented an experimental version of NPR that uses **Glyphs** instead of verbose XML-like tags for structural control. This migration aims to improve token efficiency and structural robustness.
+
+#### Key Features
+- **Atomic Tokens**: Structural markers (`🜞`, `🜆`, `🜂`, `🜃`, `🝞`) are added as single "atomic" tokens in the tokenizer, reducing sequence length and latency.
+- **Implicit Block Closing**: The architecture now supports implicit block closing (e.g., a new Step `🜂` implicitly closes the previous one), removing the need for explicit closing tags like `</step>`.
+- **Semantic Initialization**: Glyph embeddings are initialized from the mean embeddings of their semantic counterparts (e.g., `step`, `plan`) to accelerate convergence.
+
+#### Glyph Mapping
+| Component | Old Tag | New Glyph | Description |
+|-----------|---------|-----------|-------------|
+| Guideline | `<guideline>` | `🜞` | High-level reasoning objective |
+| Plan | `<plan>` | `🜆` | Strategic planning step |
+| Step | `<step>` | `🜂` | Parallel execution step |
+| Takeaway | `<takeaway>` | `🜃` | Synthesis of findings |
+| Final | `\boxed{}` | `🝞` | Final Answer Block |
+
+#### Running with Glyphs
+To run sampling with the Glyph-based structure:
+```bash
+bash scripts/sampling.sh
+```
+*Note: The script has been updated to point to `prompts/npr_glyph.txt` by default.*
+
+#### End-to-End Reproduction on Runpod
+To reproduce the experiment from scratch (e.g., on a fresh Runpod instance):
+
+1.  **Environment Setup**: Follow the [Stage 2: NPR-Beta](#stage-2-npr-beta) installation.
+2.  **Model Download**: Ensure you have the base model (e.g., `Qwen/Qwen3-4B-Instruct-2507`) downloaded.
+3.  **Sampling**:
+    *   Edit `scripts/sampling.sh`: Set `MODEL_PATH` to your base model path (e.g., `Qwen/Qwen3-4B-Instruct-2507`).
+    *   Run `bash scripts/sampling.sh`.
+    *   This will generate a dataset in `output/rejection_sampling_...`.
+4.  **Training (SFT)**:
+    *   Edit `train/sft_math.sh`: Set `train_file_path` to the path of the JSON file generated in step 3.
+    *   Run `bash train/sft_math.sh`.
 
 ## Contributing
 

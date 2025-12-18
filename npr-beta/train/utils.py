@@ -17,20 +17,9 @@ def add_and_init_special_tokens(
     """
     if new_special_tokens is None:
         # TOKEN HIERARCHY: guideline -> plan -> step -> takeaway
-        new_special_tokens = [
-            "<guideline>",
-            "</guideline>",
-            "<plan>",
-            "</plan>",
-            "<step>",
-            "</step>",
-            "<takeaway>",
-            "</takeaway>",
-        ]
         if model.config.model_type != "qwen3":
-            new_special_tokens += ["<think>", "</think>"]
-            # Add Glyph tokens
-            new_special_tokens += ["🜞", "🜆", "🜂", "🜃", "🝞"]
+             # Use Glyphs for NPR structure + think tags
+             new_special_tokens = ["<think>", "</think>", "🜞", "🜆", "🜂", "🜃", "🝞"]
 
         logger.info(f"Using tokenzier of {model.config.model_type}")
 
@@ -72,8 +61,15 @@ def add_and_init_special_tokens(
                 lm_head.weight.data[special_id] = avg_lm_logits.clone()
         else:
             logger.warning(
-                f"Failed to initialize special token '{tok}': some base tokens are unknown. Using random init."
+                f"Failed to initialize special token '{tok}': using mean embedding init."
             )
+            special_id = tokenizer.convert_tokens_to_ids(tok)
+            with torch.no_grad():
+                mean_embed = embed.weight.data.mean(dim=0)
+                embed.weight.data[special_id] = mean_embed
+                if not tied and lm_head.weight.shape == embed.weight.shape:
+                    lm_head.weight.data[special_id] = mean_embed.clone()
+
 
 
 TAG_TOKEN_IDS = {
@@ -85,8 +81,11 @@ TAG_TOKEN_IDS = {
     "step_start": "🜂",
     # Takeaway phase - synthesis of parallel steps
     "takeaway_start": "🜃",
-    "final_start": "🝞"
+    "final_marker": "🝞"
 }
+# NOTE:
+# <think> tokens are treated as content-only reasoning markers.
+# They do NOT participate in parallel masking, structure tracking, or rewards.
 
 
 def construct_parallel_attention_mask(
@@ -434,7 +433,10 @@ class NPRDataCollator(trl.DataCollatorForCompletionOnlyLM):
                 position_id = construct_parallel_position_ids(input_ids, self.tokenizer)
             except ValueError as e:
                 logger.error(e)
-                text = self.tokenizer.decode(example["input_ids"])
+                text = self.tokenizer.decode(
+                    example["input_ids"],
+                    skip_special_tokens=False
+                )
                 with open(f"logs/error-{time.time()}.log", "w") as f:
                     f.write(str(e) + "\n\n")
                     f.write(text)
