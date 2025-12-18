@@ -145,7 +145,7 @@ class PromptBuilder:
         # syntax = Syntax(self.instruction, "html", theme="monokai", line_numbers=True)
         syntaxed_instruction = Syntax(
             self.instruction,
-            "xml",
+            "markdown",
             theme="github-dark",
             line_numbers=True,
             word_wrap=True,
@@ -195,10 +195,8 @@ class RejectionSampler:
 
         if args.parallel_reasoning:
             console.log("[bold pink1]Parallel reasoning enabled.[/bold pink1]")
-            stop_token_ids = [
-                self.tokenizer.encode("</guideline>")[0],
-                self.tokenizer.encode("</step>")[0],
-            ]
+            stop_token_ids = [] # Glyphs are implicit, we generally don't stop early unless EOS
+            # Optional: Stop at 🝞? No, we want the answer.
         else:
             stop_token_ids = []
 
@@ -224,10 +222,16 @@ class RejectionSampler:
         if len(answer) > 0:
             answer = answer[0].strip()
         else:
-            pos = prediction.find("</think>")
-            answer = (
-                prediction[pos + len("</think>") :].strip() if pos != -1 else prediction
-            )
+            # Fallback for Glyph format: Look for content after 🝞 (Final)
+            if "🝞" in prediction:
+                answer = prediction.split("🝞")[-1].strip()
+            elif "</think>" in prediction:
+                pos = prediction.find("</think>")
+                answer = (
+                    prediction[pos + len("</think>") :].strip() if pos != -1 else prediction
+                )
+            else:
+                answer = prediction
         return answer
 
     def generate_with_retry(self, prompts: List[str]) -> List[str]:

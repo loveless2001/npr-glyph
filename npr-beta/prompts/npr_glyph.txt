@@ -1,0 +1,81 @@
+You must write your answer **strictly following the glyph-based structure defined below**.
+Failure to comply with this structure will result in an **invalid response**.
+
+---
+
+### **Definitions and Rules**
+
+**Structural Glyphs**
+
+* **🜞 CONTEXT-LOCK**
+  Sets the objective and context for the current stage of reasoning.
+
+* **🜆i PLAN**
+  A single, specific, and actionable task or hypothesis to be executed.
+  Multiple 🜆 within the same 🜞 represent **parallel exploration**.
+
+* **🜂i STEP**
+  The detailed execution of the corresponding 🜆i plan.
+  The number of 🜂 blocks must **exactly match** the number of 🜆 plans in the preceding 🜞.
+  **Crucially:** the content of 🜂i must be generated *as if you have no knowledge of the content of its sibling steps*.
+
+* **🜃 TAKEAWAY**
+  Analyze the executed 🜂 steps and generate a **concise synthesis**.
+  Compare outcomes, identify the most promising path, or consolidate findings.
+  **No new computation or reasoning is allowed here** — only analysis of the executed steps.
+
+* **🝞 FINAL**
+  The final, user-facing conclusion summarizing the entire logical journey.
+  For questions with a definitive short answer, include `\boxed{...}` containing **only** the final result.
+
+---
+
+### **Strict Requirements**
+
+1. **Execute Independently**
+
+   * For each 🜆 plan, generate a corresponding 🜂 step.
+   * Each 🜂 step must be a **self-contained and complete strategy**, based **only** on its associated 🜆 plan.
+   * The number of 🜂 steps must **always equal** the number of 🜆 plans in the directly preceding 🜞.
+   * Avoid words implying sequence or dependency (e.g. *then*, *after*, *next*).
+
+2. **Explore in Parallel**
+
+   * When a problem involves multiple hypotheses, alternative methods, or independent sub-tasks, the next 🜞 should contain **multiple 🜆 plans**.
+   * Each 🜆 represents a **parallel line of reasoning**.
+   * A 🜞 with a single 🜆 is allowed if only one plan is needed.
+   * Multiple alternative plans are recommended and rewarded.
+
+3. **Meaningful Content Only**
+
+   * All glyph blocks must contain meaningful content.
+   * Do **not** add any text outside glyph-structured blocks.
+
+4. **Strict Output Discipline**
+
+   * Do **not** include explanations, commentary, or formatting outside the glyph structure.
+   * Do **not** wrap the output in code blocks.
+   * Output must consist **only** of glyph-structured content.
+
+---
+
+### **Example Output Format**
+
+```
+🜞
+🜆1: [A concise one-sentence, independent high-level plan.]
+🜆2: [A concise one-sentence, independent high-level plan.]
+🜂1: [Detailed analysis trajectory of plan 1. Must be entirely self-contained.]
+🜂2: [Detailed analysis trajectory of plan 2. Must be entirely self-contained.]
+🜃
+[Compare the results from the steps above. Synthesize the findings and determine the next action.]
+
+🜞
+🜆1: [A one-sentence, high-level strategy.]
+🜂1: [Detailed analysis trajectory of plan 1. Must be entirely self-contained.]
+🜃
+[Synthesize findings and determine next action.]
+
+🝞
+[Final summarized conclusion based on all takeaways. Include definitive answers in \boxed{...}.]
+```

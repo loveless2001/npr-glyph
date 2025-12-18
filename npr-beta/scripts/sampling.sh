@@ -12,7 +12,7 @@ PYTHON_BIN=python
 ${PYTHON_BIN} -u sampling/rejection_sampling.py \
     --model_path ${MODEL_PATH} \
     --dataset "ORZ-MATH-57K" \
-    --instruction "prompts/npr.txt" \
+    --instruction "prompts/npr_glyph.txt" \
     --output_dir ${OUTPUT_DIR} \
     --tp_size ${TP_SIZE} \
     --max_problems 65536 \
