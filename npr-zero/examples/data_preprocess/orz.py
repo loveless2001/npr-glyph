@@ -45,64 +45,87 @@ if __name__ == '__main__':
 
     # follow R1
     system_prompt = r"""
-You must write your answer strictly following the XML-like format defined below. Failure to comply with this format will result in an invalid response.
+You must write your answer **strictly following the glyph-based structure defined below**.
+Failure to comply with this structure will result in an **invalid response**.
 
-**Definitions and Rules:**
+---
 
-* `<guideline>`: A container for one or more `<plan>` tags. It sets the objective for the current stage of reasoning.
-* `<plan>i:</plan>`: A single, specific, and actionable task or hypothesis to be executed. Multiple plans within a guideline represent parallel exploration.
-* `<step>i:</step>`: The detailed execution of the corresponding `<plan>i`. The number of `<step>` tags must exactly match the number of `<plan>` tags in the preceding `<guideline>`. **Crucially, the content of this step must be generated *as if* you have no knowledge of the content of its sibling steps.**
-* `<takeaway>`: Use the `<takeaway>` tag to analyze steps and generate a *concise* summary. Compare the outcomes of the different steps, identify the most promising path, or consolidate the findings. The takeaway determines the next action: either proceeding to the next `<guideline>` for deeper analysis or moving to the final answer. **Only analyze the executed steps, NO additional computation or reasoning is allowed here.**
-* After analysis, add the final, user-facing conclusion that summarizes the entire logical journey from all preceding steps and takeaways into a clear, final response for the user. For questions with a definitive, short answer, you must include `\\boxed{...}` containing only the final result.
+### **Definitions and Rules**
 
-**Strict Requirements:**
+**Structural Glyphs**
 
-1. **Execute Independently:** For each `<plan>`, generate a corresponding `<step>`.
-    * Each of the plans and steps must be a *self-contained, complete strategy* for solving the task or subtask.
-    * You must treat each `<step>` as an independent execution unit. The reasoning within `<step>i:` must only be based on `<plan>i:`, not on the content of any other `<step>`.
-    * The number of `<step>` tags must always equal the number of `<plan>` tags in the directly preceding `<guideline>`.
-    * Avoid words implying sequence or dependency (e.g. “then”, “after”, “next”).
-2. **Explore in Parallel:** When a problem or previous analysis involves multiple hypotheses, alternative methods, or independent sub-tasks, your next `<guideline>` should contain multiple `<plan>` tags.
-    * Each `<plan>` represents a parallel line of reasoning.
-    * `<guideline>` with a single `<plan>` is allowed if one plan is needed.
-    * Multiple alternative plans are recommended and will be awarded.
-3. **Meaningful content:** All tags must contain meaningful content. Do not add any text or explanation between the tags.
-4. No other tags or text outside the defined structure is allowed. Directly generate output. Do not wrap it in triple backticks or any other code block formatting.
+* **🜞 CONTEXT-LOCK**
+  Sets the objective and context for the current stage of reasoning.
 
+* **🜆i PLAN**
+  A single, specific, and actionable task or hypothesis to be executed.
+  Multiple 🜆 within the same 🜞 represent **parallel exploration**.
 
-**Example Output Format:**
+* **🜂i STEP**
+  The detailed execution of the corresponding 🜆i plan.
+  The number of 🜂 blocks must **exactly match** the number of 🜆 plans in the preceding 🜞.
+  **Crucially:** the content of 🜂i must be generated *as if you have no knowledge of the content of its sibling steps*.
 
-<guideline>
-<plan>1: [A concise one-sentence, indepedent high-level plan.]</plan>
-...
-</guideline>
-<step>
-1: [Detailed analysis trajectory of plan 1. Must be entirely self-contained.]
-</step>
-...
-<takeaway>
+* **🜃 TAKEAWAY**
+  Analyze the executed 🜂 steps and generate a **concise synthesis**.
+  Compare outcomes, identify the most promising path, or consolidate findings.
+  **No new computation or reasoning is allowed here** — only analysis of the executed steps.
+
+* **🝞 FINAL**
+  The final, user-facing conclusion summarizing the entire logical journey.
+  For questions with a definitive short answer, include `\\boxed{...}` containing **only** the final result.
+
+---
+
+### **Strict Requirements**
+
+1. **Execute Independently**
+
+   * For each 🜆 plan, generate a corresponding 🜂 step.
+   * Each 🜂 step must be a **self-contained and complete strategy**, based **only** on its associated 🜆 plan.
+   * The number of 🜂 steps must **always equal** the number of 🜆 plans in the directly preceding 🜞.
+   * Avoid words implying sequence or dependency (e.g. *then*, *after*, *next*).
+
+2. **Explore in Parallel**
+
+   * When a problem involves multiple hypotheses, alternative methods, or independent sub-tasks, the next 🜞 should contain **multiple 🜆 plans**.
+   * Each 🜆 represents a **parallel line of reasoning**.
+   * A 🜞 with a single 🜆 is allowed if only one plan is needed.
+   * Multiple alternative plans are recommended and rewarded.
+
+3. **Meaningful Content Only**
+
+   * All glyph blocks must contain meaningful content.
+   * Do **not** add any text outside glyph-structured blocks.
+
+4. **Strict Output Discipline**
+
+   * Do **not** include explanations, commentary, or formatting outside the glyph structure.
+   * Do **not** wrap the output in code blocks.
+   * Output must consist **only** of glyph-structured content.
+
+---
+
+### **Example Output Format**
+
+```
+🜞
+🜆1: [A concise one-sentence, independent high-level plan.]
+🜆2: [A concise one-sentence, independent high-level plan.]
+🜂1: [Detailed analysis trajectory of plan 1. Must be entirely self-contained.]
+🜂2: [Detailed analysis trajectory of plan 2. Must be entirely self-contained.]
+🜃
 [Compare the results from the steps above. Synthesize the findings and determine the next action.]
-</takeaway>
 
-<guideline>
-<plan>1: [A one-sentence, high-level strategy]</plan>
-<plan>2: [A one-sentence, high-level strategy]</plan>
-...
-</guideline>
-<step>
-1: [Detailed analysis trajectory of plan 1. Must be entirely self-contained.]
-</step>
-<step>
-2: [Detailed analysis trajectory of plan 2. Must be entirely self-contained.]
-</step>
-...
-<takeaway>
-[Compare the results from the steps above. Synthesize the findings and determine the next action.]
-</takeaway>
+🜞
+🜆1: [A one-sentence, high-level strategy.]
+🜂1: [Detailed analysis trajectory of plan 1. Must be entirely self-contained.]
+🜃
+[Synthesize findings and determine next action.]
 
-... [more guidelines, steps and takeaways]
-
-[The final, summarized conclusion based on all takeaways. Include definitive answers in \\boxed{...} format.]
+🝞
+[Final summarized conclusion based on all takeaways. Include definitive answers in \\boxed{...}.]
+```
 """
     print(system_prompt)
 
