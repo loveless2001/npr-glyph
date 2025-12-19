@@ -4,14 +4,15 @@ from typing import List
 
 
 TAG_TOKEN_IDS = {
-    "guideline_start": "<guideline>",
-    "guideline_end": "</guideline>",
-    "plan_start": "<plan>",
-    "plan_end": "</plan>",
-    "step_start": "<step>",
-    "step_end": "</step>",
-    "takeaway_start": "<takeaway>",
-    "takeaway_end": "</takeaway>",
+    "guideline_start": "🜞",
+    # "guideline_end": "</guideline>", # Implicit
+    "plan_marker": "🜆", # 🜆 Plan content ...
+    # "plan_end": "</plan>",
+    "step_marker": "🜂", # 🜂 Step content ...
+    # "step_end": "</step>",
+    "takeaway_marker": "🜃", # 🜃 Takeaway content ...
+    # "takeaway_end": "</takeaway>",
+    "final_marker": "🝞"
 }
 
 
@@ -41,112 +42,102 @@ def generate_parallel_attention_mask(
         torch.ones(seq_len, seq_len, dtype=torch.bool, device=device)
     )  # Primary attention mask for parallel patterns
 
-    step_start_id = tokenizer.convert_tokens_to_ids(TAG_TOKEN_IDS["step_start"])
-    step_end_id = tokenizer.convert_tokens_to_ids(TAG_TOKEN_IDS["step_end"])
-    takeaway_start_id = tokenizer.convert_tokens_to_ids(TAG_TOKEN_IDS["takeaway_start"])
+    guideline_start_id = tokenizer.convert_tokens_to_ids(TAG_TOKEN_IDS["guideline_start"])
+    step_start_id = tokenizer.convert_tokens_to_ids(TAG_TOKEN_IDS["step_marker"])
+    takeaway_start_id = tokenizer.convert_tokens_to_ids(TAG_TOKEN_IDS["takeaway_marker"])
 
-    # locate the first "<|im_end|>" token
-    i = input_ids.index(tokenizer.convert_tokens_to_ids("<|im_end|>")) + 1
-    structure_stack = []
-    step_spans = []
-
+    # locate the first "<|im_end|>" token if possible, or start from 0
+    try:
+        start_idx = input_ids.index(tokenizer.convert_tokens_to_ids("<|im_end|>")) + 1
+    except ValueError:
+        start_idx = 0
+        
+    i = start_idx
+    structure_stack = [] # Stores active blocks (parallel/guideline)
+    
+    # Helper to close current block (step)
+    # But here we need to construct step_spans for the parallel block.
+    # structure_stack elements: {"type": "parallel", "step_spans": [(start, end), ...], "current_step_start": int or None}
+    
     while i < seq_len:
         current_token_id = input_ids[i]
 
-        if current_token_id == step_start_id:
-            if structure_stack:
-                return None, True
-
-            structure_stack.append({"type": "step", "start_marker_index": i})
-
+        if current_token_id == guideline_start_id:
+            # Start parallel block
+            # If we were in a step (implicit?), close it?
+            # Nested guidelines not standard but let's assume one level for now or strict nesting.
+            # If we see 🜞, we start a new context.
+            structure_stack.append({"type": "parallel", "step_spans": [], "current_step_start": None, "guideline_start": i})
             i += 1
             continue
-
-        # Check </step> end - CRITICAL for parallel attention computation
-        elif current_token_id == step_end_id:
-            step_end_marker_index = i + 1
-
-            if not structure_stack or structure_stack[-1]["type"] != "step":
-                return None, True
-
-            closed_step_block = structure_stack.pop()
-
-            # SPAN TRACKING: Record step boundaries for attention masking
-            step_start_marker_index = closed_step_block["start_marker_index"]
-            if step_start_marker_index < step_end_marker_index:
-                step_spans.append((step_start_marker_index, step_end_marker_index))
-            else:
-                return None, True
-
-            i = step_end_marker_index
-            continue
-
+            
+        elif current_token_id == step_start_id:
+             if not structure_stack or structure_stack[-1]["type"] != "parallel":
+                 # Step outside guideline? Ignore or error.
+                 pass
+             else:
+                 # Closing previous step if exists
+                 block = structure_stack[-1]
+                 if block["current_step_start"] is not None:
+                     block["step_spans"].append((block["current_step_start"], i))
+                 
+                 # Start new step
+                 block["current_step_start"] = i
+        
+             i += 1
+             continue
+             
         elif current_token_id == takeaway_start_id:
-            if structure_stack:
-                return None, True
+             if not structure_stack or structure_stack[-1]["type"] != "parallel":
+                 pass
+             else:
+                 block = structure_stack[-1]
+                 # Close last step
+                 if block["current_step_start"] is not None:
+                     block["step_spans"].append((block["current_step_start"], i))
+                     block["current_step_start"] = None
+                 
+                 # Now process the block
+                 step_spans = block["step_spans"]
+                 num_steps = len(step_spans)
+                 
+                 if num_steps > 1:
+                     all_i_indices_to_mask = []
+                     all_j_indices_to_mask = []
 
-            num_steps = len(step_spans)
+                     for step_idx_a in range(num_steps):
+                         start_a, end_a = step_spans[step_idx_a]
+                         if start_a >= end_a: continue
+                         indices_a = torch.arange(start_a, end_a, device=device)
 
-            # UNSHARED steps - Core parallel attention isolation
-            # RATIONALE: Independent reasoning steps should not attend to each other
-            # This is the KEY innovation enabling true takeaway reasoning
-            if num_steps > 1:
-                all_i_indices_to_mask = []  # Row indices for masking
-                all_j_indices_to_mask = []  # Column indices for masking
+                         for step_idx_b in range(step_idx_a + 1, num_steps):
+                             start_b, end_b = step_spans[step_idx_b]
+                             if start_b >= end_b: continue
+                             indices_b = torch.arange(start_b, end_b, device=device)
 
-                # PAIRWISE MASKING: Block attention between all step pairs
-                for step_idx_a in range(num_steps):
-                    start_a, end_a = step_spans[step_idx_a]
-                    # SAFETY: Skip invalid spans
-                    if start_a >= end_a:
-                        return None, True
+                             grid_i, grid_j = torch.meshgrid(indices_a, indices_b, indexing="ij")
+                             all_i_indices_to_mask.append(grid_i.flatten())
+                             all_j_indices_to_mask.append(grid_j.flatten())
 
-                    # Generate token indices for first step
-                    indices_a = torch.arange(start_a, end_a, device=device)
+                     if all_i_indices_to_mask:
+                         final_i = torch.cat(all_i_indices_to_mask)
+                         final_j = torch.cat(all_j_indices_to_mask)
+                         bool_attention_mask[final_i, final_j] = False
+                         bool_attention_mask[final_j, final_i] = False
+                 
+                 # Close parallel block? 
+                 # Takeaway is part of the flow after steps.
+                 # Usually matches with Guideline.
+                 structure_stack.pop()
+        
+             i += 1
+             continue
+        
+        else:
+             i += 1
 
-                    for step_idx_b in range(step_idx_a + 1, num_steps):
-                        start_b, end_b = step_spans[step_idx_b]
-                        # SAFETY: Skip invalid spans
-                        if start_b >= end_b:
-                            return None, True
-
-                        # Generate token indices for second step
-                        indices_b = torch.arange(start_b, end_b, device=device)
-
-                        # EFFICIENT MASKING: Use meshgrid for all (i,j) combinations
-                        grid_i, grid_j = torch.meshgrid(
-                            indices_a, indices_b, indexing="ij"
-                        )
-
-                        all_i_indices_to_mask.append(grid_i.flatten())
-                        all_j_indices_to_mask.append(grid_j.flatten())
-
-                # APPLY MASKING: Block cross-step attention
-                if all_i_indices_to_mask:  # Only apply if there are indices to mask
-                    final_i = torch.cat(all_i_indices_to_mask)
-                    final_j = torch.cat(all_j_indices_to_mask)
-
-                    # BIDIRECTIONAL MASKING: Block attention in both directions
-                    # False = masked attention, True = allowed attention
-                    bool_attention_mask[final_i, final_j] = False  # step A -> step B
-                    bool_attention_mask[final_j, final_i] = False  # step B -> step A
-            else:
-                # SINGLE step: No cross-step masking needed
-                pass
-
-            i += 1
-            step_spans = []
-            continue
-
-        # ADVANCE PARSER: Move to next token if no structured reasoning tags matched
-        i += 1
-
-    if structure_stack:
-        return None, True
-
-    # FINAL CONVERSION: Boolean mask to float attention scores
-    # ATTENTION SEMANTICS: 0.0 = allowed attention, -inf = blocked attention
-    # This format is compatible with PyTorch's scaled_dot_product_attention
+    # End loop
+    
     float_attention_mask = torch.full_like(
         bool_attention_mask, -torch.inf, dtype=torch.float
     )
@@ -162,79 +153,97 @@ def generate_parallel_position_ids(input_ids: List[int], tokenizer) -> List[int]
         input_ids = input_ids.tolist()
 
     # Get special token IDs
-    tag_ids = {
-        tag: tokenizer.convert_tokens_to_ids(token)
-        for tag, token in TAG_TOKEN_IDS.items()
-    }
+    # Using explicit names for clarity
+    guideline_id = tokenizer.convert_tokens_to_ids(TAG_TOKEN_IDS["guideline_start"])
+    step_id = tokenizer.convert_tokens_to_ids(TAG_TOKEN_IDS["step_marker"])
+    takeaway_id = tokenizer.convert_tokens_to_ids(TAG_TOKEN_IDS["takeaway_marker"])
 
     position_ids = torch.arange(len(input_ids), device="cpu", dtype=torch.long)
 
+    # State
+    # We need to track:
+    # - current_parallel_block: {guideline_pos_id: int, steps: [{start_idx: int, end_idx: int}], current_step_idx: int}
+    
     block_stack = []
 
-    i = input_ids.index(tokenizer.convert_tokens_to_ids("<|im_end|>")) + 1
+    try:
+        start_idx = input_ids.index(tokenizer.convert_tokens_to_ids("<|im_end|>")) + 1
+    except ValueError:
+        start_idx = 0
+        
+    i = start_idx
+    
     while i < len(input_ids):
         token_id = input_ids[i]
-        current_block_state = block_stack[-1] if block_stack else {}
+        
+        if token_id == guideline_id:
+            block_stack.append({
+                "type": "parallel",
+                "guideline_start_pos": i, # Raw index
+                "step_start_pos": None, # Normalized pos ID for start of steps
+                "current_step_start_idx": None,
+                "step_lengths": [],
+                "base_pos": position_ids[i].item() # The pos ID at the start of guideline
+            })
+            
+        elif token_id == step_id:
+            if block_stack:
+                block = block_stack[-1]
+                
+                # If we were in a step, close it
+                if block["current_step_start_idx"] is not None:
+                     # Calculate length of previous step
+                     # It ended at i
+                     prev_len = position_ids[i].item() - position_ids[block["current_step_start_idx"]].item()
+                     block["step_lengths"].append(prev_len)
+                
+                # Start new step
+                # The position of this step should reset to match others.
+                # Where do steps start?
+                # Usually after the guideline content (plans).
+                # But guideline content length varies.
+                # Wait, parallel position IDs mean steps share the same position range.
+                # So Step 2 starts at same pos ID as Step 1.
+                
+                if block["step_start_pos"] is None:
+                    # First step. Define the anchor.
+                    # This step starts at current i.
+                    block["step_start_pos"] = position_ids[i].item()
+                    block["current_step_start_idx"] = i
+                else:
+                    # Subsequent step. Reset position.
+                    # Current pos ID at i should become step_start_pos
+                    # So pivot = position_ids[i] - step_start_pos
+                    # position_ids[i:] -= pivot
+                    
+                    pivot = position_ids[i].item() - block["step_start_pos"]
+                    position_ids[i:] -= pivot
+                    block["current_step_start_idx"] = i
 
-        if token_id == tag_ids["guideline_start"]:
-            block_stack.append(
-                {
-                    "guideline_end_pos_id": -1,
-                    "max_step_len": 0,
-                    # "num_plans": 0,
-                    "num_steps": 0,
-                    "is_in_guideline": False,
-                    # "is_in_plan": False,
-                    "is_in_step": False,
-                }
-            )
-            block_stack[-1]["is_in_guideline"] = True
-
-        elif (
-            token_id == tag_ids["guideline_end"]
-            and current_block_state
-            and current_block_state["is_in_guideline"]
-        ):
-            current_block_state["guideline_end_pos_id"] = position_ids[i]
-            current_block_state["is_in_guideline"] = False
-
-        elif (
-            token_id == tag_ids["step_start"]
-            and current_block_state
-            and current_block_state["guideline_end_pos_id"] != -1
-        ):
-            current_block_state["is_in_step"] = True
-            position_ids[i:] -= position_ids[i] - (current_block_state["guideline_end_pos_id"] + 1)  # make step overlap \n
-
-        elif (
-            token_id == tag_ids["step_end"]
-            and current_block_state
-            and current_block_state["is_in_step"]
-        ):
-            current_block_state["max_step_len"] = max(
-                current_block_state["max_step_len"],
-                position_ids[i] - current_block_state["guideline_end_pos_id"],
-            )
-            # Reset step state
-            current_block_state["num_steps"] += 1
-            current_block_state["is_in_step"] = False
-
-        elif (
-            token_id == tag_ids["takeaway_start"]
-            and current_block_state
-            and current_block_state["guideline_end_pos_id"] != -1
-        ):
-            position_ids[i:] -= position_ids[i] - (
-                current_block_state["guideline_end_pos_id"]
-                + current_block_state["max_step_len"]
-                + 1
-            )  # make takeaway overlap \n
-            block_stack.pop()
-
+        elif token_id == takeaway_id:
+            if block_stack:
+                block = block_stack[-1]
+                # Close last step
+                if block["current_step_start_idx"] is not None:
+                     prev_len = position_ids[i].item() - position_ids[block["current_step_start_idx"]].item()
+                     block["step_lengths"].append(prev_len)
+                
+                # Takeaway should start after the longest step.
+                # Max step end pos = step_start_pos + max(step_lengths)
+                # Current pos id at i (takeaway start) is effectively step_start_pos (since we reset or continued).
+                # Wait, if we just finished a step, position_ids[i] is step_start + length_of_last_step.
+                # But we want it to be step_start + max(all_step_lengths).
+                
+                current_pos_at_takeaway = position_ids[i].item()
+                if block["step_lengths"]:
+                    max_len = max(block["step_lengths"])
+                    target_pos = block["step_start_pos"] + max_len
+                    
+                    adjustment = target_pos - current_pos_at_takeaway
+                    position_ids[i:] += adjustment
+                
+                block_stack.pop()
+        
         i += 1
-
-    # Final check for unclosed blocks
-    if block_stack or len(position_ids) != len(input_ids):
-        return None, True
 
     return position_ids, False

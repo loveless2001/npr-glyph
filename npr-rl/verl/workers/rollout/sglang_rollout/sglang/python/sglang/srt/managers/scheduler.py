@@ -1468,7 +1468,7 @@ class Scheduler(
                     over_all_indices = torch.cat([over_all_indices, suffix_indices])
                     right_most_pos.append(req.right_most_pos)
                     assert parent_start_path_idx_stack == req.parent_start_path_idx_stack, "parent_start_path_idx_stack should be the same"
-            over_all_list = over_all_list + self.tokenizer.encode("<takeaway>\n")
+            over_all_list = over_all_list + self.tokenizer.encode("\n🜃\n")
             max_right_most_pos = max(right_most_pos)
             parent_start_path_idx = parent_start_path_idx_stack[-1]
             parent_start_path_idx_stack = parent_start_path_idx_stack[:-1]
@@ -1606,7 +1606,7 @@ class Scheduler(
                     over_all_indices = torch.cat([over_all_indices, suffix_indices])
                     right_most_pos.append(req.right_most_pos)
                     assert parent_start_path_idx_stack == req.parent_start_path_idx_stack, "parent_start_path_idx_stack should be the same"
-            over_all_list = over_all_list + self.tokenizer.encode("<takeaway>\n")
+            over_all_list = over_all_list + self.tokenizer.encode("\n🜃\n")
             max_right_most_pos = max(right_most_pos)
             parent_start_path_idx = parent_start_path_idx_stack[-1]
             parent_start_path_idx_stack = parent_start_path_idx_stack[:-1]

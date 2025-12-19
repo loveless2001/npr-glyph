@@ -195,8 +195,9 @@ def construct_parallel_attention_mask(
             if not structure_stack or structure_stack[-1]["type"] != "parallel":
                  # If we see a step/plan outside strictly, we could implicitly start a parallel block or error.
                  # Updated NPR logic often is loose. Let's assume strict for now based on previous code.
-                 # actually, if we just saw <guideline>.... <step>, then stack[-1] is parallel.
-                 # BUT if we saw <step>... <step>, stack[-1] is "step". IMPORTANT.
+                 # Checks if we just saw a block opener.
+                 # If we saw 🜆... 🜂, then stack[-1] might be "plan" (which we close) or "parallel".
+                 # If we saw 🜂... 🜂, stack[-1] is "step". IMPORTANT to close it.
                  
                  # Logic: If current top is "step" or "plan", CLOSE IT first.
                  if structure_stack and structure_stack[-1]["type"] in ["step", "plan"]:

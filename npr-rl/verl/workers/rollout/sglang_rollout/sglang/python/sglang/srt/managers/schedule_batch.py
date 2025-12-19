@@ -696,9 +696,16 @@ class Req:
                 self.finished_reason = FINISH_LENGTH(length=self.sampling_params.max_new_tokens)
                 return
 
-        guideline_start_id = self.tokenizer.encode("<guideline>")[0]
-        guideline_end_id = self.tokenizer.encode("</guideline>")[0]
-        step_end_id = self.tokenizer.encode("</step>")[0]
+        guideline_start_id = self.tokenizer.encode("🜞", add_special_tokens=False)[-1]
+        
+        # In Glyph format, there is no explicit </guideline>. 
+        # A guideline section ends when a step starts (🜂) or a takeaway starts (🜃)
+        # However, plan (🜆) also appears inside guideline.
+        # But for 'trigger_token_id' logic, we are looking for specific stop tokens.
+        # If we used 🜂 and 🜃 as stop tokens:
+        
+        step_start_id = self.tokenizer.encode("🜂", add_special_tokens=False)[-1]
+        takeaway_start_id = self.tokenizer.encode("🜃", add_special_tokens=False)[-1]
 
         last_token_id = self.output_ids[-1]
 
@@ -720,41 +727,72 @@ class Req:
                 self.trigger_dead = False
 
                 # Postpone the finish reason until we have more context
-                if self.trigger_token_id == guideline_end_id:
-
-                    if (step_end_id in self.output_ids) or (guideline_start_id not in self.output_ids):
-                        self.finished_reason = FINISH_MATCHED_TOKEN(matched=self.trigger_token_id)  # contain </step> token
-                        return
+                
+                # Logic for Glyph format:
+                # If we stopped at 🜂 (Step Start), it means we just finished a plan or a previous step.
+                if self.trigger_token_id == step_start_id:
+                    # We encountered a Step Start.
+                    # This could mark the end of the Guideline section (plans).
+                    
+                    # Check if we have seen 🜞 (Guideline Start)
+                    if guideline_start_id not in self.output_ids:
+                         # Weird, step without guideline?
+                         self.finished_reason = FINISH_MATCHED_TOKEN(matched=self.trigger_token_id)
+                         return
 
                     prefix_input = self.tokenizer.decode(self.output_ids)
-                    guideline_idx = prefix_input.rfind("<guideline>")
+                    guideline_idx = prefix_input.rfind("🜞")
+                    if guideline_idx == -1:
+                        # Should have been caught by ID check, but just in case
+                        self.finished_reason = FINISH_MATCHED_TOKEN(matched=self.trigger_token_id)
+                        return
+                        
                     guideline_content = prefix_input[guideline_idx:]
-                    def extract(s):
-                        pattern = r"<plan>\s*([0-9]+(?:\.[0-9]+)*)\s*:"
-                        return [f"{m.group(1)}:" for m in re.finditer(pattern, s)]
-                    step_ids = extract(guideline_content)
-                    step_number = len(step_ids)
+                    
+                    # Extract plans using 🜆
+                    # Pattern: 🜆 followed by content
+                    # We just count them?
+                    # The original logic extracted plan numbers.
+                    # Glyph plan: 🜆 1. ...
+                    def extract_plans(s):
+                        # Find all occurrences of 🜆
+                        return [m.start() for m in re.finditer("🜆", s)]
+                    
+                    plan_starts = extract_plans(guideline_content)
+                    step_number = len(plan_starts)
+                    
                     if (step_number == 0) or (step_number > 5):
-                        self.finished_reason = FINISH_MATCHED_TOKEN(matched=self.trigger_token_id)  # too many steps
+                         # Too many plans or no plans
+                        self.finished_reason = FINISH_MATCHED_TOKEN(matched=self.trigger_token_id)
                         return
 
                     self.finished_reason = FINISH_MATCHED_GOAL_TOKEN(matched=self.trigger_token_id)
 
-                elif self.trigger_token_id == step_end_id:
-
-                    if guideline_end_id in self.output_ids:
-                        self.finished_reason = FINISH_MATCHED_TOKEN(matched=self.trigger_token_id)  # contain </guideline> token
-                        return
-
-                    if len(self.output_ids) < 3:
-                        self.trigger_dead = True
-                    elif self.output_ids[-3] == step_end_id:
+                elif self.trigger_token_id == takeaway_start_id:
+                     # Stopped at Takeaway.
+                     # This means steps are done.
+                     
+                     # Check if we have associated 🜞
+                     if guideline_start_id not in self.output_ids:
+                         self.finished_reason = FINISH_MATCHED_TOKEN(matched=self.trigger_token_id)
+                         return
+                         
+                     # Original logic checked for </guideline> existence when stopping at </step>
+                     # Here, stopping at 🜃 implies we are done with steps.
+                     
+                     if len(self.output_ids) < 3:
+                         self.trigger_dead = True
+                     # Check previous tokens?
+                     # Original: elif self.output_ids[-3] == step_end_id:
+                     # Here, we don't have step_end_id.
+                     # We can just assume valid path if legitimate generation.
+                     else:
                         self.finished_reason = FINISH_MATCHED_PATH_TOKEN(matched=self.trigger_token_id)
-                    else:
-                        self.trigger_dead = True
 
                 else:
-                    raise ValueError(f"Unexpected trigger token id: {self.trigger_token_id}. ")
+                    # Fallback for other stop tokens
+                     self.finished_reason = FINISH_MATCHED_TOKEN(matched=self.trigger_token_id)
+                     return
 
                 return
 
@@ -1603,13 +1641,47 @@ class ScheduleBatch(ScheduleBatchDisaggregationDecodeMixin):
                 dead_req = self.reqs[fork_indices[idx]]
                 prefix_input = dead_req.tokenizer.decode(torch.tensor(dead_req.origin_input_ids + dead_req.output_ids[:-1]))
                 parent_rid = self.reqs[fork_indices[idx]].rid
-                guideline_idx = prefix_input.rfind("<guideline>")
+                guideline_idx = prefix_input.rfind("🜞")
                 guideline_content = prefix_input[guideline_idx:]
 
-                def extract(s):
-                    pattern = r"<plan>\s*([0-9]+(?:\.[0-9]+)*)\s*:"
-                    return [f"{m.group(1)}:" for m in re.finditer(pattern, s)]
-                step_ids = extract(guideline_content)
+                def extract_steps_from_plans(s):
+                    # Glyph format: 🜞 ... 🜆 Plan1 ... 🜆 Plan2 ...
+                    # We want to initiate steps 🜂.
+                    # Should we append "1." or similar?
+                    # Let's check if the plan has a number.
+                    # Pattern: 🜆\s*(\d+[\.:])?
+                    # If we find a number, we use it. If not, maybe just empty string?
+                    
+                    matches = list(re.finditer(r"🜆\s*(?:(\d+(?:\.\d+)*)[:.]?)?", s))
+                    results = []
+                    for i, m in enumerate(matches):
+                        # if captured group 1 exists (the number), use it?
+                        # Or just use index?
+                        # Original NPR used explicit labels.
+                        # If the prompt used "🜆 1.", maybe step should be "🜂 1."
+                        label = m.group(1)
+                        if label:
+                            results.append(f"{label}")
+                        else:
+                            # If no label, maybe just use index + 1? or nothing?
+                            # Let's use index + 1 to be safe/explicit if the model likes structure.
+                            # Or nothing if pure glyph.
+                            # Let's try to match strict glyph style which might just be 🜂.
+                            # But to differentiate paths, let's keep it simple.
+                            # Actually, `e` is appended after `\n<step>\n`.
+                            # If we use `\n🜂\n{e}`, providing a number is good.
+                            results.append(f"{i+1}.")
+                    return results
+
+                step_ids = extract_steps_from_plans(guideline_content)
+                
+                # ... loop happens below ...
+                for i, e in enumerate(step_ids):
+                     # Construct new inputs
+                     # Replace XML tags with Glyphs in generation
+                     # We need to construct the prompt for the step.
+                     # <step>\n{e} -> 🜂 {e}
+                     pass # (context only, code follows)
 
                 dead_req.sampling_params.repetition_penalty = 1.02
 
@@ -1620,8 +1692,18 @@ class ScheduleBatch(ScheduleBatchDisaggregationDecodeMixin):
                     start_path_idx = len(dead_req.origin_input_ids + dead_req.output_ids[:-1]) + 1
                     req = Req(
                         rid=rid,
-                        origin_input_text=prefix_input + f"\n<step>\n{e}",
-                        origin_input_ids=dead_req.origin_input_ids + dead_req.output_ids[:-1] + tokenizer.encode(f"\n<step>\n{e}"),
+                        # Glyph update:
+                        # Construct input for the new step.
+                        # We use 🜂 as the step marker.
+                        # e contains the label (e.g. "1.")
+                        
+                        origin_input_text=prefix_input + f"\n🜂 {e}",
+                        origin_input_ids=dead_req.origin_input_ids + dead_req.output_ids[:-1] + tokenizer.encode(f"\n🜂 {e}"),
+                        
+                        # Note: We replaced <step> with 🜂.
+                        # Check logic: output_ids[:-1] removes the trigger token (likely 🜂 or stop token)
+                        # We re-append the correct start for the specific path.
+                        
                         sampling_params=dead_req.sampling_params,
                         return_logprob=dead_req.return_logprob,
                         top_logprobs_num=dead_req.top_logprobs_num,

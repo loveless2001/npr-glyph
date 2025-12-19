@@ -298,6 +298,10 @@ def glyph_format_reward(output_ids, glyph_ids):
             stage = "TAKEAWAY"
             
         elif tid == G_FINAL:
+            if stage != "TAKEAWAY":
+                # Final must come after Takeaway
+                return 0.0
+
             # Final should eventually appear.
             # Only one allowed?
             if has_final: # Already saw one

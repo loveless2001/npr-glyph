@@ -713,14 +713,30 @@ def create_sampling_params(config: EvaluationConfig, tokenizer) -> SamplingParam
     if "multiverse" in config.instruction:
         stop_tokens.extend(["</Goal>", "</Path>"])
     else:
-        stop_tokens.extend(["</guideline>", "</step>"])
+        # Glyph stop tokens: 🜂 (Step - ends guideline/plans), 🜃 (Takeaway - ends steps)
+        # Note: In explicit XML, </guideline> ended plans, </step> ended a step.
+        # In Implicit Glyphs, the start of 🜂 ends plans, and start of next 🜂/🜃 ends a step.
+        stop_tokens.extend(["🜂", "🜃"])
 
     if config.parallel_reasoning:
         console.log("[bold white]Parallel reasoning enabled.[/bold white]")
-        stop_token_ids = [
-            tokenizer.encode(stop_tokens[0])[0],
-            tokenizer.encode(stop_tokens[1])[0],
-        ]
+        stop_token_ids = []
+        for st in stop_tokens:
+             encoded = tokenizer.encode(st, add_special_tokens=False)
+             if encoded:
+                 stop_token_ids.append(encoded[-1]) # Take last token if multiple
+             else:
+                 console.log(f"[yellow]Warning: Could not encode stop token {st}[/yellow]")
+
+        if len(stop_token_ids) == 0 and config.parallel_reasoning:
+             console.log("[red]Error: No stop tokens found for parallel reasoning![/red]")
+        
+        # Original code assumed exactly 2 specific tokens at indices 0 and 1.
+        # We try to maintain that structure if possible, or just pass all found.
+        # stop_token_ids = [
+        #     tokenizer.encode(stop_tokens[0])[0],
+        #     tokenizer.encode(stop_tokens[1])[0],
+        # ]
     else:
         stop_token_ids = []
 

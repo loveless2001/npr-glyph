@@ -868,7 +868,10 @@ class SGLangRollout(BaseRollout):
         # For Parallel Generation
         request_sampling_params.update(
             {
-                "stop_token_ids": [tokenizer.encode("</guideline>")[0], tokenizer.encode("</step>")[0]],
+                "stop_token_ids": [
+                    tokenizer.encode("🜂", add_special_tokens=False)[-1],
+                    tokenizer.encode("🜃", add_special_tokens=False)[-1]
+                ],
                 "skip_special_tokens": False,
                 "no_stop_trim": True
             }

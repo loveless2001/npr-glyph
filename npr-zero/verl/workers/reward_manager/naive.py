@@ -87,13 +87,49 @@ class NaiveRewardManager:
                 extra_info=extra_info,
             )
 
+            # Integration of Glyph Format Reward
+            from verl.utils.reward_score.math import glyph_format_reward
+            
+            # Prepare Glyph IDs (Doing this inside loop is inefficient but safe for dynamic tokenizers? 
+            # Ideally verify outside, but let's do it here or assume valid.)
+            # Optimally move this outside loop.
+            
+            glyph_tokens = {
+                "guideline": "🜞",
+                "plan": "🜆",
+                "step": "🜂",
+                "takeaway": "🜃",
+                "final": "🝞"
+            }
+            glyph_ids = {}
+            for k, v in glyph_tokens.items():
+                encoded = self.tokenizer.encode(v, add_special_tokens=False)
+                if encoded:
+                    glyph_ids[k] = encoded[-1]
+            
+            format_reward = glyph_format_reward(valid_response_ids, glyph_ids)
+
             if isinstance(score, dict):
+                score["score"] += format_reward
+                score["format_reward"] = format_reward
                 reward = score["score"]
                 # Store the information including original reward
                 for key, value in score.items():
                     reward_extra_info[key].append(value)
             else:
+                score += format_reward
                 reward = score
+                reward_extra_info["format_reward"].append(format_reward) # Log it
+                
+                # Check consistency if score was just a float
+                # If compute_score returns simple float, we can't easily append to extra_info blindly without key?
+                # Actually earlier code: if dict.. else reward=score.
+                # And reward_extra_info is defaultdict(list).
+                
+                # We need to make sure we don't break existing logging.
+                # If score is float, we treat it as total? 
+                # Yes.
+                pass # Already updated score.
 
             reward_tensor[i, valid_response_length - 1] = reward
 
@@ -105,6 +141,7 @@ class NaiveRewardManager:
                 print("[prompt]", prompt_str)
                 print("[response]", response_str)
                 print("[ground_truth]", ground_truth)
+                print(f"[format_reward] {format_reward}")
                 if isinstance(score, dict):
                     for key, value in score.items():
                         print(f"[{key}]", value)
