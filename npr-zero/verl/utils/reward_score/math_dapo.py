@@ -244,135 +244,92 @@ def verify(
 
 def get_format_reward(text: str) -> float:
     """
-    <guideline>
-    <plan>
-    1:...
-    </plan>
-    <plan>
-    2:...
-    </plan>
-    <plan>
-    3:...
-    </plan>
-    </guideline>
-    <step>
-    1:...
-    </step>
-    <step>
-    2:...
-    </step>
-    <step>
-    3:...
-    </step>
-    <takeaway>
-    ...
-    </takeaway>
-    <guideline>
-    <plan>
-    1:...
-    </plan>
-    </guideline>
-    <step>
-    1:...
-    </step>
-    <takeaway>
-    ...
-    </takeaway>
-    \boxed{concise final answer}
+    Validates Glyph-based NPR structure.
+    Structure:
+    🜞 (Guideline)
+      🜆 (Plan 1)
+      🜆 (Plan 2)
+    🜂 (Step 1)
+    🜂 (Step 2)
+    🜃 (Takeaway)
 
     Rules:
-    * All tags must appear exactly in the order shown.
-    * Each '<guideline>' contains only '<plan>' tags.
-    * The number of '<step>' tags must exactly match the number of '<plan>' tags.
-    * The contents between each <step> are independent of each other.
-    * '<plan>' and '<step>' must be adjacent with no extra content.
-    * Content inside '<plan>' and '<step>' must be meaningful (not empty).
-    * The contents between each <step> are independent of each other and cannot know each other's contents.
-    * Include exactly one non-empty '\boxed{...}' containing the short final answer.
-
-    Returns a float reward.
+    * 🜞 starts a block.
+    * 🜆 (Plans) follow 🜞 immediately (or after text).
+    * 🜂 (Steps) follow Plans.
+    * Number of 🜂 must match number of 🜆 in the block.
+    * 🜃 (Takeaway) ends the block.
+    * 🝞 (Final) contains boxed answer (optional check here).
     """
 
     score = 0.0
 
-    # Normalize whitespace
-    text = re.sub(r"\s+", "", text.strip())
+    # Normalize
+    text = text.strip()
 
-    def has_invalid_content(section: str) -> bool:
-        special_tags = ["<guideline>", "</guideline>", "<plan>", "</plan>", "<step>", "</step>", "<takeaway>", "</takeaway>"]
-        for tag in special_tags:
-            if tag in section:
-                return True
-        return False
-
-    # Parse multiple guideline-step-takeaway blocks
-    # Each block starts with <guideline>...</guideline>, followed by <step>...</step>+, and ends with <takeaway>...</takeaway>
-    block_pattern = r"<guideline>(.*?)</guideline>((?:(?!<guideline>).)*?)<takeaway>(.*?)</takeaway>"
-    block_matches = list(re.finditer(block_pattern, text, re.DOTALL))
-    if not block_matches:
+    # If no glyphs at all, fail
+    if "🜞" not in text:
         return -1.5
 
-    pos = 0
-    for bm in block_matches:
-        if bm.start() != pos:
-            extra = text[pos: bm.start()].strip()
-            if has_invalid_content(extra):
-                return -1.5
-        pos = bm.end()
+    # Split into blocks by Guideline 🜞
+    # Note: Split will give pre-text (empty?) and then blocks starting with 🜞
+    parts = text.split("🜞")
 
-        guideline_content, steps_block, takeaway_content = bm.groups()
+    # First part is pre-guideline content (ignore or penalize? usually empty)
+    blocks = parts[1:]
 
-        # Validate plans inside guideline
-        plans = re.findall(r"<plan>(.*?)</plan>", guideline_content, re.DOTALL)
-        if len(plans) == 0:
-            return -1.0
+    for block in blocks:
+        # Block string starts after 🜞
+        # It should contain 🜆s, then 🜂s, then 🜃
 
-        # Ensure only plans inside guideline
-        plans_concat = "".join(f"<plan>{p}</plan>" for p in plans)
-        if plans_concat.strip() != guideline_content.strip():
-            score -= 0.4
+        # Check Takeaway 🜃
+        if "🜃" not in block:
+             # Malformed block
+             return -1.0
 
-        # Validate adjacency for plans
-        plan_rejoined = re.sub(r"<plan>.*?</plan>", "</plan><plan>", guideline_content, flags=re.DOTALL)
-        cleaned_plan = plan_rejoined.replace("</plan><plan>", "").strip()
-        if cleaned_plan:
-            score -= 0.2
+        # Split by Takeaway to isolate the main execution part from what follows
+        # Note: 🜃 might be followed by 🝞 or another 🜞 (which we handled by split)
+        # But wait, 🜞 split splits the *whole* string.
+        # So 'block' contains 🜆...🜂...🜃...
+        # It might contain text after 🜃 before the next 🜞.
 
-        # Extract step contents
-        step_texts = re.findall(r"<step>(.*?)</step>", steps_block, re.DOTALL)
-        if len(step_texts) != len(plans):
-            return -1.0
+        # Let's count Plans and Steps
+        # Plans 🜆
+        # Steps 🜂
 
-        # Validate adjacency for steps
-        step_rejoined = re.sub(r"<step>.*?</step>", "</step><step>", steps_block, flags=re.DOTALL)
-        cleaned_step = step_rejoined.replace("</step><step>", "").strip()
-        if cleaned_step:
-            score -= 0.2
+        # We need to ensure order: 🜆 come before 🜂.
+        # Simple check: find index of first 🜂 and last 🜆.
 
-        # Too short checks
-        for plan in plans:
-            if len(plan) < 3 or has_invalid_content(plan):
-                score -= 0.4
-        for step in step_texts:
-            if len(step) < 6 or has_invalid_content(plan):
-                score -= 0.4
+        first_step_idx = block.find("🜂")
+        last_plan_idx = block.rfind("🜆")
 
-        # Takeaway length check
-        if len(takeaway_content.strip()) < 6 or has_invalid_content(plan):
-            score -= 0.4
+        if first_step_idx == -1:
+             # No steps? Bad.
+             return -1.0
 
-    if pos < len(text):
-        extra = text[pos:].strip()
-        if has_invalid_content(extra):
-            return -1.0
+        if last_plan_idx == -1:
+             # No plans? Bad.
+             return -1.0
 
-        # Verify \\boxed{}
-        pattern = re.compile(r'\\boxed\{(.*?)\}')
-        matches = pattern.findall(extra)
-        count = len(matches)
-        has_empty_content = any(m.strip() == "" for m in matches) if count > 0 else True
-        if has_empty_content:
-            return -1.0
+        # All plans must be before the first step?
+        # NPR usually: Guideline -> Plans -> Steps.
+        # So yes, last_plan_idx < first_step_idx
+        if last_plan_idx > first_step_idx:
+             score -= 0.5 # Interleaved or wrong order
+
+        # Count
+        num_plans = block.count("🜆")
+        num_steps = block.count("🜂")
+
+        if num_plans != num_steps:
+             score -= 1.0 # Mismatch
+
+        # Check Takeaway is after steps
+        takeaway_idx = block.find("🜃")
+        last_step_idx = block.rfind("🜂")
+
+        if takeaway_idx < last_step_idx:
+             score -= 0.5 # Takeaway before steps finished?
 
     return score
 
