@@ -40,7 +40,7 @@ def run_ppo(config) -> None:
             runtime_env={
                 "env_vars": {"TOKENIZERS_PARALLELISM": "true", "NCCL_DEBUG": "WARN", "VLLM_LOGGING_LEVEL": "WARN"}
             },
-            _temp_dir="ray_tmp",
+            _temp_dir="/tmp/ray_tmp",
             num_cpus=config.ray_init.num_cpus,
         )
 

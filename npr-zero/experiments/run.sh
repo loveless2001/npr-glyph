@@ -70,7 +70,7 @@ gen_tp=${GPU_NUM}
 
 ray stop --force 2>/dev/null || true
 unset RAY_ADDRESS RAY_REDIS_ADDRESS RAY_JOB_ID
-ray start --head --port=8964 --num-cpus=16 --temp-dir=ray_tmp --disable-usage-stats
+ray start --head --port=8964 --num-cpus=16 --temp-dir=/tmp/ray_tmp --disable-usage-stats
 
 python3 -m recipe.dapo.main_dapo \
     data.train_files="${TRAIN_FILE}" \
