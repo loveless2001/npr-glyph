@@ -154,3 +154,31 @@ Failure to comply with this structure will result in an **invalid response**.
     print(test_dataset[0])
 
     test_dataset.to_parquet(os.path.join(local_dir, "test.parquet"))
+
+    # Conversion for rejection_sampling.py (MegaScience format)
+    import json
+    
+    megascience_data = []
+    # We can iterate over the test_dataset which has already been mapped
+    for item in test_dataset:
+        # The 'prompt' field in the processed dataset is a list of dicts: [{"role": "user", "content": "..."}]
+        # We need to extract the original question.
+        # However, the 'prompt' content includes the system prompt appended.
+        # We can use the 'extra_info' field which we preserved!
+        
+        question = item["extra_info"]["question"]
+        solution = item["extra_info"]["answer"]
+        
+        megascience_data.append({
+            "problem": question,
+            "solution": solution
+        })
+
+    # Save to the specific path expected by the sampling script
+    megascience_path = "dataset/megascience/megascience.json"
+    os.makedirs(os.path.dirname(megascience_path), exist_ok=True)
+    
+    with open(megascience_path, "w") as f:
+        json.dump(megascience_data, f, indent=4)
+
+    print(f"Also saved JSON for evaluation to {megascience_path}")
